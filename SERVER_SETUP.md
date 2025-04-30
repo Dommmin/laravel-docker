@@ -132,7 +132,7 @@ listen.owner = www-data
 listen.group = www-data
 listen.mode = 0660
 
-php_admin_value[open_basedir] = /home/deployer/laravel/current/:/home/deployer/laravel/shared/:/tmp/:/var/lib/php/sessions/
+php_admin_value[open_basedir] = /home/deployer/laravel/current/:/home/deployer/laravel/releases/:/home/deployer/laravel/shared/:/tmp/:/var/lib/php/sessions/
 php_admin_value[disable_functions] = "exec,passthru,shell_exec,system,proc_open,popen"
 php_admin_flag[expose_php] = off
 ```

@@ -38,9 +38,9 @@ ln -sf "$SHARED_DIR/.env" "$RELEASE_DIR/.env"
 
 echo "▶️ Optymalizacja aplikacji Laravel..."
 cd "$RELEASE_DIR"
-php artisan storage:link
 php artisan optimize:clear
 php artisan optimize
+php artisan storage:link
 
 echo "▶️ Migracje bazy danych..."
 php artisan migrate --force
