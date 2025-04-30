@@ -1,18 +1,19 @@
 # VPS Server Setup Guide
 
 This guide will help you set up your VPS for Laravel deployment with zero downtime.
-## 0. Create User (optional)
+## 0. Create User (optional - you can use your non root user)
 
 ```bash
-# Create a new user
-sudo adduser deployer
-sudo usermod -aG www-data deployer
+# Create user with proper primary group
+sudo adduser deployer --ingroup www-data
+sudo usermod -aG sudo deployer
 
-# Add permissions for deployer user
-sudo echo "deployer ALL=(ALL) NOPASSWD:/usr/bin/chmod, /usr/bin/chown" | sudo tee /etc/sudoers.d/deployer
-sudo echo "deployer ALL=(ALL) NOPASSWD:/usr/bin/systemctl restart php8.3-fpm" | sudo tee /etc/sudoers.d/deployer
-sudo echo "deployer ALL=(ALL) NOPASSWD:/usr/bin/systemctl restart nginx" | sudo tee /etc/sudoers.d/deployer
-sudo echo "deployer ALL=(ALL) NOPASSWD:/usr/bin/systemctl reload nginx" | sudo tee /etc/sudoers.d/deployer
+# Secure sudo access
+echo "deployer ALL=(ALL:ALL) ALL" | sudo tee /etc/sudoers.d/deployer
+echo 'Defaults:deployer !requiretty' | sudo tee -a /etc/sudoers.d/deployer  
+
+# Fix home directory permissions
+sudo chmod 711 /home/deployer
 ```
 
 ## 1. Initial Server Setup
@@ -20,8 +21,8 @@ sudo echo "deployer ALL=(ALL) NOPASSWD:/usr/bin/systemctl reload nginx" | sudo t
 ```bash
 # Update the system
 apt update
-apt install nginx php-fpm mariadb-server
-sudo apt install php8.3-cli php8.3-common php8.3-curl php8.3-xml php8.3-mbstring php8.3-zip php8.3-mysql php8.3-gd php8.3-intl php8.3-bcmath php8.3-redis php8.3-imagick php8.3-pgsql php8.3-sqlite3 php8.3-tokenizer php8.3-dom php8.3-fileinfo php8.3-iconv php8.3-simplexml php8.3-opcache
+sudo apt install -y nginx php-fpm mariadb-server ufw fail2ban acl
+sudo apt install -y php8.3-{cli,common,curl,xml,mbstring,zip,mysql,gd,intl,bcmath,redis,imagick,opcache,tokenizer,dom,fileinfo}
 sudo systemctl restart php8.3-fpm
 ```
 
@@ -117,41 +118,32 @@ sudo systemctl restart nginx
 ## 3. Update PHP-FPM Configuration
 
 ```bash
-# nano /etc/php/8.3/fpm/pool.d/www.conf
+# Run
+nano /etc/php/8.3/fpm/pool.d/www.conf
+```
+### Replace with the following configuration:
+```ini
 [www]
 user = deployer
-group = deployer
+group = www-data
 
 listen = /var/run/php/php8.3-fpm.sock
 listen.owner = www-data
 listen.group = www-data
 listen.mode = 0660
 
-pm = dynamic
-pm.max_children = 50
-pm.start_servers = 5
-pm.min_spare_servers = 5
-pm.max_spare_servers = 10
-pm.max_requests = 500
-
-pm.process_idle_timeout = 10s
-request_terminate_timeout = 30s
-request_slowlog_timeout = 5s
-
-slowlog = /var/log/php-fpm/slow.log
-
-php_admin_value[error_log] = /var/log/php-fpm/error.log
-php_admin_flag[log_errors] = on
-
-php_admin_value[memory_limit] = 256M
-php_admin_value[disable_functions] = "exec,passthru,shell_exec,system"
-php_admin_value[open_basedir] = "/home/deployer/laravel/current/:/tmp/:/var/lib/php/sessions/"
+php_admin_value[open_basedir] = /home/deployer/laravel/current/:/home/deployer/laravel/shared/:/tmp/:/var/lib/php/sessions/
+php_admin_value[disable_functions] = "exec,passthru,shell_exec,system,proc_open,popen"
+php_admin_flag[expose_php] = off
 ```
 
 ## 4. Update PHP Configuration
-
 ```bash
-# nano /etc/php/8.3/fpm/php.ini
+# Run
+nano /etc/php/8.3/fpm/php.ini
+```
+### Replace with the following configuration:
+```ini
 [PHP]
 expose_php = Off
 max_execution_time = 30
@@ -196,13 +188,18 @@ date.timezone = Europe/Warsaw
 ## 5. Set Up Directory Structure
 
 ```bash
-# Create directory structure
+# Create structure with proper permissions
 sudo mkdir -p /home/deployer/laravel/{releases,shared}
-
-# Set permissions
 sudo chown -R deployer:www-data /home/deployer/laravel
-sudo chmod -R 775 /home/deployer/laravel
-sudo chmod g+s /home/deployer/laravel
+sudo chmod -R 2775 /home/deployer/laravel
+
+# Shared folders setup
+sudo mkdir -p /home/deployer/laravel/shared/storage/{app,framework,logs}
+sudo mkdir -p /home/deployer/laravel/shared/storage/framework/{cache,sessions,views}
+sudo chmod -R 775 /home/deployer/laravel/shared
+
+# Set ACL for future files
+sudo setfacl -Rdm g:www-data:rwx /home/deployer/laravel
 ```
 
 ## 6. Set Up SSH Key for GitHub Actions (as deployer user)
