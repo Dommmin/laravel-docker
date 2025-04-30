@@ -36,16 +36,11 @@ ln -s "$SHARED_DIR/bootstrap_cache" "$RELEASE_DIR/bootstrap/cache"
 
 ln -sf "$SHARED_DIR/.env" "$RELEASE_DIR/.env"
 
-echo "▶️ Nadawanie uprawnień..."
-chown -R "$APP_USER:$APP_GROUP" "$RELEASE_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$SHARED_DIR"
-chmod -R 775 "$SHARED_DIR/storage" "$SHARED_DIR/bootstrap_cache"
-
 echo "▶️ Optymalizacja aplikacji Laravel..."
 cd "$RELEASE_DIR"
+php artisan storage:link
 php artisan optimize:clear
 php artisan optimize
-php artisan storage:link
 
 echo "▶️ Migracje bazy danych..."
 php artisan migrate --force
