@@ -1,4 +1,4 @@
-name: Deploy Laravel App
+name: Zero Downtime Deployment
 
 on:
   push:
