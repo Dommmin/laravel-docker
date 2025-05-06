@@ -17,7 +17,7 @@ services:
             - ./docker/supervisord.conf:/etc/supervisor/supervisord.conf
         environment:
             - APP_ENV=${APP_ENV:-local}
-            - APP_DEBUG=${APP_DEBUG:-false}
+            - APP_DEBUG=${APP_DEBUG:-true}
         networks:
             - laravel-network
         ports:
